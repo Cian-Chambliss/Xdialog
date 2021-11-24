@@ -69,6 +69,7 @@ exports.convert = function(def,format) {
         var height = 0;
         var controlType = "edit";
         var listitems = null;
+        var choiceVar = null;
         if( size > 0 ) {
             variableName = fieldDef.substring(size);
             size = fieldDef.substring(0,size);
@@ -90,13 +91,22 @@ exports.convert = function(def,format) {
         }
         if( fieldDef.indexOf("^") > 0 ) {
             var listIndex = fieldDef.indexOf("^=");
+            var  overrideType = "dropdown";
+            if( listIndex < 1 ) {
+                listIndex = fieldDef.indexOf("^#");
+                overrideType = "listbox";
+            }
+
             if( listIndex > 0 ) {
                 variableName = fieldDef.substring(0,listIndex);
                 fieldDef = fieldDef.substring(listIndex+2).trim();
                 if( fieldDef[0] == '{') {
                     listitems = parseItemList(fieldDef);
-                    controlType = "dropdown";                    
-                }
+                    controlType = overrideType;
+                } else {
+                    choiceVar = fieldDef;
+                    controlType = overrideType;
+                }               
             }
         }
         var control = { type : controlType , variable : variableName };
@@ -111,6 +121,9 @@ exports.convert = function(def,format) {
         }
         if( listitems ) {
             control.items = listitems;
+        }
+        if( choiceVar ) {
+            control.populateFrom = choiceVar;
         }
         if( !colDef ) {
             colDef = control;
