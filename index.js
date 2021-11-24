@@ -179,6 +179,12 @@ exports.convert = function(def,format) {
             colDef.span.push( control );
         }        
     };
+    var finalizeColDef = function() {
+        if( colDef.span ) {
+            return { type : "span" , items : colDef.span };
+        }
+        return colDef;
+    }
     while( index < def.length ) {
         var ch = def[index];
         if( ch == '{') {    
@@ -215,7 +221,7 @@ exports.convert = function(def,format) {
         } else if( ch == '|' ) { // row sep
             processTextSnippet(index);
             if( colDef ) {
-                colsDef.push(colDef);
+                colsDef.push(finalizeColDef());
                 colDef = null;
             }
             ++index;
@@ -223,7 +229,7 @@ exports.convert = function(def,format) {
         } else if( ch == ';' ) { // col sep
             processTextSnippet(index);
             if( colDef ) {
-                colsDef.push(colDef);
+                colsDef.push(finalizeColDef());
                 colDef = null;
             }
             rowDef.push(colsDef);       
@@ -235,11 +241,11 @@ exports.convert = function(def,format) {
         }
     }
     if( colDef ) {
-        colsDef.push(colDef);
+        colsDef.push(finalizeColDef());
         colDef = null;
     }
     if( colsDef.length > 0 ) {
         rowDef.push(colsDef);       
     }
-    return { "rows" : rowDef };
+    return { type : "table" , "items" : rowDef };
 }
