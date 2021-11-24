@@ -84,10 +84,50 @@ exports.convert = function(def,format) {
             colDef.span.push( control );
         }        
     };
+    var parseItemList = function(text) {
+        var startIndex = 0;
+        var items = [];
+        if( text[0] == '{' )  {
+            startIndex = 1;
+        }
+        var index = startIndex;
+        while( index < text.length ) {
+            if( text[index] == ',' ) {
+                items.push( text.substring(startIndex,index) );
+                startIndex = index+1;
+            } else if( text[index] == '}' && text[0] == '{' ) {
+                items.push( text.substring(startIndex,index) );
+                startIndex = index+1;
+                return items;
+            }
+            index = index + 1;
+        }
+        if( startIndex < index ) {
+            items.push( text.substring(startIndex,index) );
+        }
+        return items;
+    }
     var processCheckbox = function(checkboxDef) {
         var variableName = checkboxDef;
         var controlType = "checkbox";
+        var eqPos = checkboxDef.indexOf("=");
+        if( eqPos > 0 ) {
+            variableName = checkboxDef.substring(0,eqPos);
+            checkboxDef = checkboxDef.substring(eqPos+1).trim();
+            if( checkboxDef != "" ) {
+                controlType = "radio";
+            }
+        }
         var control = { type : controlType , variable : variableName };
+        if( controlType == "radio" ) {
+            radioDef = checkboxDef;
+            if(  checkboxDef[0] == '{' && checkboxDef.indexOf("}") > 0 ) {
+                control.items = parseItemList(checkboxDef);
+            } else {
+                control.text = checkboxDef;
+            }
+        }
+
         if( !colDef ) {
             colDef = control;
         } else {
