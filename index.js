@@ -13,6 +13,29 @@ exports.convert = function(def,format) {
         }
         return index;
     };
+    var parseItemList = function(text) {
+        var startIndex = 0;
+        var items = [];
+        if( text[0] == '{' )  {
+            startIndex = 1;
+        }
+        var index = startIndex;
+        while( index < text.length ) {
+            if( text[index] == ',' ) {
+                items.push( text.substring(startIndex,index) );
+                startIndex = index+1;
+            } else if( text[index] == '}' && text[0] == '{' ) {
+                items.push( text.substring(startIndex,index) );
+                startIndex = index+1;
+                return items;
+            }
+            index = index + 1;
+        }
+        if( startIndex < index ) {
+            items.push( text.substring(startIndex,index) );
+        }
+        return items;
+    }
     var processTextSnippet = function(endIndex) {
         if( startIndex < endIndex ) {
             var subText = def.substring(startIndex, endIndex);
@@ -45,6 +68,7 @@ exports.convert = function(def,format) {
         var width = 0;
         var height = 0;
         var controlType = "edit";
+        var listitems = null;
         if( size > 0 ) {
             variableName = fieldDef.substring(size);
             size = fieldDef.substring(0,size);
@@ -64,6 +88,17 @@ exports.convert = function(def,format) {
                 }
             }
         }
+        if( fieldDef.indexOf("^") > 0 ) {
+            var listIndex = fieldDef.indexOf("^=");
+            if( listIndex > 0 ) {
+                variableName = fieldDef.substring(0,listIndex);
+                fieldDef = fieldDef.substring(listIndex+2).trim();
+                if( fieldDef[0] == '{') {
+                    listitems = parseItemList(fieldDef);
+                    controlType = "dropdown";                    
+                }
+            }
+        }
         var control = { type : controlType , variable : variableName };
         if( limit ) {
             control.limit = limit;
@@ -73,6 +108,9 @@ exports.convert = function(def,format) {
         }
         if( height ) {
             control.height = height;
+        }
+        if( listitems ) {
+            control.items = listitems;
         }
         if( !colDef ) {
             colDef = control;
@@ -101,29 +139,6 @@ exports.convert = function(def,format) {
             colDef.span.push( control );
         }        
     };
-    var parseItemList = function(text) {
-        var startIndex = 0;
-        var items = [];
-        if( text[0] == '{' )  {
-            startIndex = 1;
-        }
-        var index = startIndex;
-        while( index < text.length ) {
-            if( text[index] == ',' ) {
-                items.push( text.substring(startIndex,index) );
-                startIndex = index+1;
-            } else if( text[index] == '}' && text[0] == '{' ) {
-                items.push( text.substring(startIndex,index) );
-                startIndex = index+1;
-                return items;
-            }
-            index = index + 1;
-        }
-        if( startIndex < index ) {
-            items.push( text.substring(startIndex,index) );
-        }
-        return items;
-    }
     var processCheckbox = function(checkboxDef) {
         var variableName = checkboxDef;
         var controlType = "checkbox";
