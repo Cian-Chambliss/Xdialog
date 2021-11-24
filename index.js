@@ -18,7 +18,7 @@ exports.convert = function(def,format) {
             var subText = def.substring(startIndex, endIndex);
             subText = subText.trim();
             if( subText.length > 0 ) {
-                var control = { text : subText };
+                var control = { type : "text", text : subText };
                 if( !colDef ) {
                     colDef = control;
                 } else {
@@ -43,19 +43,36 @@ exports.convert = function(def,format) {
         var size = numLength(fieldDef);
         var limit = 0;
         var width = 0;
+        var height = 0;
         var controlType = "edit";
         if( size > 0 ) {
             variableName = fieldDef.substring(size);
             size = fieldDef.substring(0,size);
+            fieldDef = variableName;
             if( size[0] == '.' ) {
                 width = parseInt(size.substring(1), 10);
             } else {
                 limit = parseInt(size, 10);
             }
+            if( fieldDef[0] == ',' ) {
+                size = numLength(fieldDef.substring(1));
+                if( size > 0 ) {
+                    variableName = fieldDef.substring(size+1);
+                    size = fieldDef.substring(1,size+1);
+                    fieldDef = variableName;
+                    height = parseInt(size, 10);
+                }
+            }
         }
         var control = { type : controlType , variable : variableName };
         if( limit ) {
             control.limit = limit;
+        }
+        if( width ) {
+            control.width = width;
+        }
+        if( height ) {
+            control.height = height;
         }
         if( !colDef ) {
             colDef = control;
@@ -117,7 +134,17 @@ exports.convert = function(def,format) {
             if( checkboxDef != "" ) {
                 controlType = "radio";
             }
+        } else {
+            var colPos = checkboxDef.indexOf(":");
+            if( colPos > 0 ) {
+                variableName = checkboxDef.substring(0,colPos);
+                checkboxDef = checkboxDef.substring(colPos+1).trim();
+                if( checkboxDef != "" ) {
+                    controlType = "radio";
+                }    
+            }
         }
+
         var control = { type : controlType , variable : variableName };
         if( controlType == "radio" ) {
             radioDef = checkboxDef;
