@@ -32,8 +32,31 @@ exports.convert = function(def,format) {
             }
         }
     };
+    var numLength = function(text) {
+        var length = 0;
+        while( ('0' <= text[length] && text[length] <= '9') || text[length] == '.' )
+            ++length;
+        return length;
+    }
     var processField = function(fieldDef) {
-        var control = { field : fieldDef };
+        var variableName = fieldDef;
+        var size = numLength(fieldDef);
+        var limit = 0;
+        var width = 0;
+        var controlType = "edit";
+        if( size > 0 ) {
+            variableName = fieldDef.substring(size);
+            size = fieldDef.substring(0,size);
+            if( size[0] == '.' ) {
+                width = parseInt(size.substring(1), 10);
+            } else {
+                limit = parseInt(size, 10);
+            }
+        }
+        var control = { type : controlType , variable : variableName };
+        if( limit ) {
+            control.limit = limit;
+        }
         if( !colDef ) {
             colDef = control;
         } else {
@@ -46,7 +69,10 @@ exports.convert = function(def,format) {
         }        
     };
     var processButton = function(buttonDef) {
-        var control = { button : buttonDef };
+        var buttonText = buttonDef;
+        var buttonControl = {  text : buttonText };
+        var controlType = "button";
+        var control = { type : controlType , text : buttonText };
         if( !colDef ) {
             colDef = control;
         } else {
@@ -58,6 +84,21 @@ exports.convert = function(def,format) {
             colDef.span.push( control );
         }        
     };
+    var processCheckbox = function(checkboxDef) {
+        var variableName = checkboxDef;
+        var controlType = "checkbox";
+        var control = { type : controlType , variable : variableName };
+        if( !colDef ) {
+            colDef = control;
+        } else {
+            if( !colDef.span ) {
+                var firstSpan = colDef;
+                colDef = { span : []};
+                colDef.span.push(firstSpan);
+            }
+            colDef.span.push( control );
+        }        
+    }
     var processCommand = function(commandDef) {
         var control = { command : commandDef };
         if( !colDef ) {
@@ -77,7 +118,7 @@ exports.convert = function(def,format) {
             processTextSnippet(index);
             startIndex = index;
             index = gitTill(def,index,'}');
-            processCommand( def.substring(startIndex,index) );
+            processCommand( def.substring(startIndex+1,index-1) );
             startIndex = index;
             continue;
         } else if( ch == '[') {            
@@ -87,14 +128,21 @@ exports.convert = function(def,format) {
                 index = gitTill(def,index+2,'%');
             }
             index = gitTill(def,index,']');
-            processField( def.substring(startIndex,index) );
+            processField( def.substring(startIndex+1,index-1) );
             startIndex = index;
             continue;
         } else if( ch == '<') {
             processTextSnippet(index);
             startIndex = index;
             index = gitTill(def,index,'>');
-            processButton( def.substring(startIndex,index) );
+            processButton( def.substring(startIndex+1,index-1) );
+            startIndex = index;
+            continue;
+        } else if( ch == '(') {
+            processTextSnippet(index);
+            startIndex = index;
+            index = gitTill(def,index,')');
+            processCheckbox( def.substring(startIndex+1,index-1) );
             startIndex = index;
             continue;
         } else if( ch == '|' ) { // row sep
