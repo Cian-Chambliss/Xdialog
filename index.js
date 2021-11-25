@@ -3,6 +3,7 @@ exports.convert = function(def,format) {
     var startIndex = 0;
     var colsDef = [];
     var colDef = null;
+    var colProps = null;
     var rowDef = [];
     var gitTill = function(text,index,chr) {
         while( index < text.length ) {
@@ -62,6 +63,16 @@ exports.convert = function(def,format) {
         return length;
     }
     var processField = function(fieldDef) {
+        var formatSpec = null;
+
+        if( fieldDef[0] =='%' ) {
+            var endFormat = gitTill(fieldDef,1,'%');
+            if( endFormat > 0 ) {
+                formatSpec =  fieldDef.substring(1,endFormat-1);
+                fieldDef = fieldDef.substring(endFormat+1);
+            }
+        }
+
         var variableName = fieldDef;
         var size = numLength(fieldDef);
         var limit = 0;
@@ -124,6 +135,19 @@ exports.convert = function(def,format) {
         }
         if( choiceVar ) {
             control.populateFrom = choiceVar;
+        }
+        if( formatSpec ) {
+            // TBD parse to flags
+            var formats = formatSpec.split(";");
+            for( var i = 0 ; i < formats.length ; ++i ) {
+                var fs = formats[i].toLowerCase();
+                if( fs == "m" ) {
+                    control.multiline = true;
+                } else if( fs == "w" || fs == "mw" ) {
+                    control.multiline = true;
+                    control.wordwrap = true;
+                }
+            }
         }
         if( !colDef ) {
             colDef = control;
@@ -195,7 +219,36 @@ exports.convert = function(def,format) {
         }        
     }
     var processCommand = function(commandDef) {
-        var control = { command : commandDef };
+        var commandName = commandDef;
+        var eqPos = commandDef.indexOf("=");
+        if( eqPos > 0) {
+            commandName = commandDef.substring(0,eqPos);
+            commandDef = commandDef.substring(eqPos+1);
+        }
+        if( commandName == "line" ) {
+            if( !colProps ) {
+                colProps = {};
+            }
+            if( commandDef != "" ) {
+                commandDef = commandDef.split(",");
+                if( commandDef.length > 1 ) {
+                    var bottom = parseInt(commandDef[0], 10);
+                    var left = parseInt(commandDef[1], 10);
+                    if( bottom > 0 ) {
+                        colProps.line_bottom = parseInt(commandDef[0], 10);
+                    }
+                    if( left > 0 ) {
+                        colProps.line_left = parseInt(commandDef[1], 10);
+                    }
+                } else {
+                    colProps.line_bottom = parseInt(commandDef[0], 10);
+                }
+            } else {
+                colProps.line_bottom = 1;
+            }
+            return;
+        }
+        var control = { type : commandName };
         if( !colDef ) {
             colDef = control;
         } else {
@@ -209,7 +262,13 @@ exports.convert = function(def,format) {
     };
     var finalizeColDef = function() {
         if( colDef.span ) {
-            return { type : "span" , items : colDef.span };
+            colDef = { type : "span" , items : colDef.span };
+        }
+        if( colProps ) {     
+            for (const key in colProps) {
+                colDef[key] = colProps[key];
+            }       
+            colProps = null;
         }
         return colDef;
     }
