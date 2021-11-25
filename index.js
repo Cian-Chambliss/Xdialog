@@ -1,5 +1,5 @@
 exports.convert = function(def,format) {
-    var convertXdialogRegion = function(def) {
+    var convertXdialogRegion = function(def,regionDepth) {
         var index = 0;
         var startIndex = 0;
         var colsDef = [];
@@ -232,6 +232,12 @@ exports.convert = function(def,format) {
                 commandName = commandDef.substring(0,eqPos);
                 commandDef = commandDef.substring(eqPos+1);
             }
+            if( commandName == "region" ) {
+                return "region";
+            }
+            if( commandName == "endregion" ) {
+                return "endregion";
+            }
             if( commandName == "line" ) {
                 if( !colProps ) {
                     colProps = {};
@@ -253,13 +259,13 @@ exports.convert = function(def,format) {
                 } else {
                     colProps.line_bottom = 1;
                 }
-                return;
+                return "line";
             }
             if( commandName == "wrap" ) {
                 if( commandDef != "" ) {
                     globalProps.wrap_text = parseInt(commandDef, 10);
                 }
-                return;
+                return "wrap";
             }
             var control = { type : commandName };
             if( !colDef ) {
@@ -271,7 +277,8 @@ exports.convert = function(def,format) {
                     colDef.span.push(firstSpan);
                 }
                 colDef.span.push( control );
-            }        
+            }
+            return commandName;
         };
         var finalizeColDef = function() {
             if( colDef.span ) {
@@ -291,7 +298,23 @@ exports.convert = function(def,format) {
                 processTextSnippet(index);
                 startIndex = index;
                 index = gitTill(def,index,'}');
-                processCommand( def.substring(startIndex+1,index-1) );
+                ch = processCommand( def.substring(startIndex+1,index-1) );
+                if( ch == "region" ) {
+                    var childRegion = convertXdialogRegion(def.substring(index),regionDepth+1);
+                    index = index + childRegion.index;
+                    if( !colDef ) {
+                        colDef = childRegion.tree;
+                    } else {
+                        if( !colDef.span ) {
+                            var firstSpan = colDef;
+                            colDef = { span : []};
+                            colDef.span.push(firstSpan);
+                        }
+                        colDef.span.push( childRegion.tree );
+                    }                    
+                } else if( ch == "endregion" && regionDepth > 0 ) {
+                    break;
+                }
                 startIndex = index;
                 continue;
             } else if( ch == '[') {            
@@ -347,7 +370,8 @@ exports.convert = function(def,format) {
         if( colsDef.length > 0 ) {
             rowDef.push(colsDef);       
         }
-        return { type : "table" , "items" : rowDef };
+        var tree = { type : "table" , "items" : rowDef };
+        return { tree : tree , index : index };
     };
-    return convertXdialogRegion(def);
+    return convertXdialogRegion(def).tree;
 }
