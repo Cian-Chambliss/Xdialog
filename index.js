@@ -6,7 +6,9 @@ exports.convert = function(def,format) {
         var colDef = null;
         var colProps = null;
         var globalProps = { 
-            wrap_text : 0 
+            wrap_text : 0 ,
+            add_space : 0 ,
+            add_linefeed : 0
         };
         var rowDef = [];
         var gitTill = function(text,index,chr) {
@@ -41,12 +43,23 @@ exports.convert = function(def,format) {
             }
             return items;
         }
+        var commitSpaceBefore = function(control) {           
+            if( globalProps.add_linefeed > 0 ) {
+                control.top_lines = globalProps.add_linefeed;
+                globalProps.add_linefeed = 0;
+            }
+            if( globalProps.add_space > 0 ) {
+                control.left_space = globalProps.add_space;
+                globalProps.add_space = 0;
+            }
+        };
         var processTextSnippet = function(endIndex) {
             if( startIndex < endIndex ) {
                 var subText = def.substring(startIndex, endIndex);
                 subText = subText.trim();
                 if( subText.length > 0 ) {
                     var control = { type : "text", text : subText };
+                    commitSpaceBefore(control);
                     if( globalProps.wrap_text > 0 ) {
                         control.wrap_text =  globalProps.wrap_text;
                     }
@@ -60,6 +73,18 @@ exports.convert = function(def,format) {
                         }
                         colDef.span.push( control );
                     }
+                }
+            }
+        };
+        var processColumnChange = function(control) {
+            if( control ) {
+                if( globalProps.add_space > 0 ) {
+                    control.right_space = globalProps.add_space;
+                    globalProps.add_space = 0;
+                }
+                if( globalProps.add_linefeed > 0 ) {
+                    control.bottom_lines = globalProps.add_linefeed;
+                    globalProps.add_linefeed = 0;
                 }
             }
         };
@@ -172,6 +197,7 @@ exports.convert = function(def,format) {
             var buttonControl = {  text : buttonText };
             var controlType = "button";
             var control = { type : controlType , text : buttonText };
+            commitSpaceBefore(control);
             if( !colDef ) {
                 colDef = control;
             } else {
@@ -205,6 +231,7 @@ exports.convert = function(def,format) {
             }
 
             var control = { type : controlType , variable : variableName };
+            commitSpaceBefore(control);
             if( controlType == "radio" ) {
                 radioDef = checkboxDef;
                 if(  checkboxDef[0] == '{' && checkboxDef.indexOf("}") > 0 ) {
@@ -267,7 +294,32 @@ exports.convert = function(def,format) {
                 }
                 return "wrap";
             }
+            if( commandName == "sp" ) {
+                if( commandDef != "" && commandDef != "sp" ) {
+                    if( commandDef.indexOf(".") < 0 ) {
+                        globalProps.add_space = parseInt(commandDef, 10);
+                    } else {
+                        globalProps.add_space = parseFloat(commandDef);
+                    }
+                } else {
+                    globalProps.add_space = 1;
+                }
+                return "sp";
+            }
+            if( commandName == "lf" ) {
+                if( commandDef != "" && commandDef != "lf" ) {
+                    if( commandDef.indexOf(".") < 0 ) {
+                        globalProps.add_linefeed = parseInt(commandDef, 10);
+                    } else {
+                        globalProps.add_linefeed = parseFloat(commandDef);
+                    }
+                } else {
+                    globalProps.add_linefeed = 1;
+                }
+                return "lf";
+            }
             var control = { type : commandName };
+            commitSpaceBefore(control);
             if( !colDef ) {
                 colDef = control;
             } else {
@@ -343,6 +395,7 @@ exports.convert = function(def,format) {
                 continue;
             } else if( ch == '|' ) { // row sep
                 processTextSnippet(index);
+                processColumnChange(colDef);
                 if( colDef ) {
                     colsDef.push(finalizeColDef());
                     colDef = null;
@@ -351,6 +404,7 @@ exports.convert = function(def,format) {
                 startIndex = index;
             } else if( ch == ';' ) { // col sep
                 processTextSnippet(index);
+                processColumnChange(colDef);
                 if( colDef ) {
                     colsDef.push(finalizeColDef());
                     colDef = null;
@@ -363,6 +417,7 @@ exports.convert = function(def,format) {
                 ++index;
             }
         }
+        processColumnChange(colDef);
         if( colDef ) {
             colsDef.push(finalizeColDef());
             colDef = null;
