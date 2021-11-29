@@ -5,6 +5,7 @@ exports.convert = function(def,format) {
         var colsDef = [];
         var colDef = null;
         var colProps = null;
+        var rowProps = null;
         var globalProps = { 
             wrap_text : 0 ,
             add_space : 0 ,
@@ -173,11 +174,18 @@ exports.convert = function(def,format) {
                 var formats = formatSpec.split(";");
                 for( var i = 0 ; i < formats.length ; ++i ) {
                     var fs = formats[i].toLowerCase();
-                    if( fs == "m" ) {
-                        control.multiline = true;
-                    } else if( fs == "w" || fs == "mw" ) {
-                        control.multiline = true;
-                        control.wordwrap = true;
+
+                    if( controlType == "edit" ) {
+                        if( fs == "m" ) {
+                            control.multiline = true;
+                        } else if( fs == "w" || fs == "mw" ) {
+                            control.multiline = true;
+                            control.wordwrap = true;
+                        }
+                    } else if( controlType == "listbox" ) {
+                        if( fs == "e" ) {
+                            control.dragsource = true;
+                        }
                     }
                 }
             }
@@ -266,25 +274,34 @@ exports.convert = function(def,format) {
                 return "endregion";
             }
             if( commandName == "line" ) {
-                if( !colProps ) {
-                    colProps = {};
-                }
                 if( commandDef != "" ) {
                     commandDef = commandDef.split(",");
                     if( commandDef.length > 1 ) {
                         var bottom = parseInt(commandDef[0], 10);
                         var left = parseInt(commandDef[1], 10);
                         if( bottom > 0 ) {
-                            colProps.line_bottom = parseInt(commandDef[0], 10);
+                            if( !rowProps ) {
+                                rowProps = {};
+                            }
+                            rowProps.line_bottom = parseInt(commandDef[0], 10);
                         }
                         if( left > 0 ) {
+                            if( !colProps ) {
+                                colProps = {};
+                            }
                             colProps.line_left = parseInt(commandDef[1], 10);
                         }
                     } else {
-                        colProps.line_bottom = parseInt(commandDef[0], 10);
+                        if( !rowProps ) {
+                            rowProps = {};
+                        }                        
+                        rowProps.line_bottom = parseInt(commandDef[0], 10);
                     }
                 } else {
-                    colProps.line_bottom = 1;
+                    if( !rowProps ) {
+                        rowProps = {};
+                    }                        
+                    rowProps.line_bottom = 1;
                 }
                 return "line";
             }
@@ -343,7 +360,21 @@ exports.convert = function(def,format) {
                 colProps = null;
             }
             return colDef;
-        }
+        };
+        var finalizeRowDef = function(colsDef) {
+            var rowDef = { cells : colsDef };
+            if( rowProps ) {     
+                for (const key in rowProps) {
+                    rowDef[key] = rowProps[key];
+                }       
+                rowProps = null;
+            }
+            if( globalProps.add_linefeed > 0 ) {
+                rowDef.top_lines = globalProps.add_linefeed;
+                globalProps.add_linefeed = 0;
+            }
+            return rowDef;
+        };
         while( index < def.length ) {
             var ch = def[index];
             if( ch == '{') {    
@@ -409,7 +440,7 @@ exports.convert = function(def,format) {
                     colsDef.push(finalizeColDef());
                     colDef = null;
                 }
-                rowDef.push(colsDef);       
+                rowDef.push(finalizeRowDef(colsDef));
                 colsDef = [];
                 ++index;
                 startIndex = index;
@@ -423,7 +454,7 @@ exports.convert = function(def,format) {
             colDef = null;
         }
         if( colsDef.length > 0 ) {
-            rowDef.push(colsDef);       
+            rowDef.push(finalizeRowDef(colsDef));
         }
         var tree = { type : "table" , "items" : rowDef };
         return { tree : tree , index : index };
