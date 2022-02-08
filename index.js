@@ -53,7 +53,20 @@ exports.convert = function(def,format) {
                 control.left_space = globalProps.add_space;
                 globalProps.add_space = 0;
             }
+            if( globalProps.initial_focus ) {
+                globalProps.initial_focus  =false;
+                control.initial_focus = true;
+            }
         };
+        var processEventAndCondition = function(def,settings) {
+            var condPos = def.indexOf("?");
+            var condition = null;
+            if( condPos > 0 ) {
+                settings.condition = def.substring(condPos+1);
+                def = def.substring(0,condPos);
+            }
+            return def;
+        }
         var processTextSnippet = function(endIndex) {
             if( startIndex < endIndex ) {
                 var subText = def.substring(startIndex, endIndex);
@@ -96,6 +109,8 @@ exports.convert = function(def,format) {
             return length;
         }
         var processField = function(fieldDef) {
+            var settings = {};
+            fieldDef = processEventAndCondition(fieldDef,settings);
             var formatSpec = null;
 
             if( fieldDef[0] =='%' ) {
@@ -169,6 +184,9 @@ exports.convert = function(def,format) {
             if( choiceVar ) {
                 control.populateFrom = choiceVar;
             }
+            if( settings.condition ) {
+                control.condition =  settings.condition;
+            }
             if( formatSpec ) {
                 // TBD parse to flags
                 var formats = formatSpec.split(";");
@@ -215,10 +233,15 @@ exports.convert = function(def,format) {
             }        
         };
         var processButton = function(buttonDef) {
+            var settings = {};
+            buttonDef = processEventAndCondition(buttonDef,settings);
             var buttonText = buttonDef;
             var buttonControl = {  text : buttonText };
             var controlType = "button";
             var control = { type : controlType , text : buttonText };
+            if( settings.condition ) {
+                control.condition =  settings.condition;
+            }
             commitSpaceBefore(control);
             if( !colDef ) {
                 colDef = control;
@@ -232,6 +255,8 @@ exports.convert = function(def,format) {
             }        
         };
         var processCheckbox = function(checkboxDef) {
+            var settings = {};
+            checkboxDef = processEventAndCondition(checkboxDef,settings);
             var variableName = checkboxDef;
             var controlType = "checkbox";
             var eqPos = checkboxDef.indexOf("=");
@@ -253,6 +278,9 @@ exports.convert = function(def,format) {
             }
 
             var control = { type : controlType , variable : variableName };
+            if( settings.condition ) {
+                control.condition =  settings.condition;
+            }
             commitSpaceBefore(control);
             if( controlType == "radio" ) {
                 radioDef = checkboxDef;
@@ -348,6 +376,10 @@ exports.convert = function(def,format) {
                     globalProps.add_linefeed = 1;
                 }
                 return "lf";
+            }
+            if( commandName == "initial_focus" ) {
+                globalProps.initial_focus = true;
+                return "initial_focus";
             }
             var control = { type : commandName };
             commitSpaceBefore(control);
