@@ -181,6 +181,20 @@ exports.convert = function(def,format) {
                         } else if( fs == "w" || fs == "mw" ) {
                             control.multiline = true;
                             control.wordwrap = true;
+                        } else if( fs == "k" ) {
+                            control.keep_selection_visible = true;
+                        } else if( fs == "a" ) {
+                            control.allow_tabs = true;
+                        } else if( fs == "z" ) {
+                            control.zblank = true;
+                        } else if( fs == "n" ) {
+                            control.defer_update = true;
+                        } else if( fs == "r" ) {
+                            control.read_only = true;
+                        } else if( fs == "^" ) {
+                            control.all_caps = true;
+                        } else if( fs == "*" ) {
+                            control.autoselect = true;
                         }
                     } else if( controlType == "listbox" ) {
                         if( fs == "e" ) {
@@ -362,7 +376,7 @@ exports.convert = function(def,format) {
             return colDef;
         };
         var finalizeRowDef = function(colsDef) {
-            var rowDef = { cells : colsDef };
+            var rowDef = { type : "row" , cells : colsDef };
             if( rowProps ) {     
                 for (const key in rowProps) {
                     rowDef[key] = rowProps[key];
