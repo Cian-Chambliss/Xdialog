@@ -235,12 +235,42 @@ exports.convert = function(def,format) {
         var processButton = function(buttonDef) {
             var settings = {};
             buttonDef = processEventAndCondition(buttonDef,settings);
+
+            if( buttonDef[0] == '*' ) {
+                settings.is_default = true;
+                buttonDef = buttonDef.substring(1);
+            }
+            var size = numLength(buttonDef);
+            if( size > 0 ) {
+                settings.width = buttonDef.substring(0,size);
+                buttonDef = buttonDef.substring(size);
+                if( buttonDef[0] == ',' ) {
+                    buttonDef = buttonDef.substring(1);
+                    size = numLength(buttonDef);
+                    if( size > 0 ) {
+                        settings.height = buttonDef.substring(0,size);
+                        buttonDef = buttonDef.substring(size);
+                    }
+                }
+                if( buttonDef[0] == ':' ) {
+                    buttonDef = buttonDef.substring(1);
+                }
+            }
             var buttonText = buttonDef;
             var buttonControl = {  text : buttonText };
             var controlType = "button";
             var control = { type : controlType , text : buttonText };
             if( settings.condition ) {
                 control.condition =  settings.condition;
+            }
+            if( settings.is_default ) {
+                control.is_default = true;
+            }
+            if( settings.width ) {
+                control.width = settings.width;
+            }
+            if( settings.height ) {
+                control.height = settings.height;
             }
             commitSpaceBefore(control);
             if( !colDef ) {
