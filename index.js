@@ -359,6 +359,24 @@ exports.convert = function(def,format) {
             commitSpaceBefore(frame.control);
             props.frame = frame;
         };
+        var cleanupCommandName = function(commandName) {
+            var endOf = commandName.length;
+            while( endOf > 1 ) {
+                var ch = commandName[endOf-1];
+                if( !('0' <= ch && ch <= '9') ) {
+                    break;
+                }
+                --endOf;
+            }
+            if( endOf < commandName.length ) {
+                var prefix = commandName.substring(0,endOf);
+                if( prefix == "region" ||  prefix == "endregion" ) {
+                    commandName = prefix;
+                }
+            }
+
+            return commandName;
+        }
         var processCommand = function(commandDef) {
             var commandName = commandDef.toLowerCase();
             var eqPos = commandDef.indexOf("=");
@@ -366,6 +384,7 @@ exports.convert = function(def,format) {
                 commandName = commandDef.substring(0,eqPos);
                 commandDef = commandDef.substring(eqPos+1);
             }
+            commandName = cleanupCommandName(commandName);
             if( commandName == "region" ) {
                 return "region";
             }
