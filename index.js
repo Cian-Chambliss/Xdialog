@@ -332,8 +332,35 @@ exports.convert = function(def,format) {
                 colDef.span.push( control );
             }        
         }
+        var parseFrame = function(commandName,frameDef,props) {
+            var size = numLength(frameDef);
+            var frame = { width : 1 , height : 1 , control : { type : "frame" , content : null } };
+            if( commandName == "blueframe" ) {
+                frame.control.frame_style = "blue";
+            }
+            if( size > 0 ) {
+                frame.width = frameDef.substring(0,size);
+                frameDef = frameDef.substring(size);
+                if( frameDef[0] == ',' ) {
+                    frameDef = frameDef.substring(1);
+                    size = numLength(frameDef);
+                    if( size > 0 ) {
+                        frame.height = frameDef.substring(0,size);
+                        frameDef = frameDef.substring(size);
+                    }
+                }
+                if( frameDef[0] == ':' ) {
+                    frameDef = frameDef.substring(1);
+                }
+            }
+            if( frameDef && frameDef != "" ) {
+                frame.control.text = frameDef;
+            }
+            commitSpaceBefore(frame.control);
+            props.frame = frame;
+        };
         var processCommand = function(commandDef) {
-            var commandName = commandDef;
+            var commandName = commandDef.toLowerCase();
             var eqPos = commandDef.indexOf("=");
             if( eqPos > 0) {
                 commandName = commandDef.substring(0,eqPos);
@@ -383,6 +410,24 @@ exports.convert = function(def,format) {
                 }
                 return "wrap";
             }
+            if( commandName == "ymargin" ) {
+                if( commandDef != "" ) {
+                    globalProps.ymargin = parseInt(commandDef, 10);
+                }
+                return "ymargin";
+            }
+            if( commandName == "xmargin" ) {
+                if( commandDef != "" ) {
+                    globalProps.xmargin = parseInt(commandDef, 10);
+                }
+                return "xmargin";                
+            }
+            if( commandName == "ysize" ) {
+                if( commandDef != "" ) {
+                    globalProps.ysize = parseInt(commandDef, 10);
+                }
+                return "ysize";                
+            }
             if( commandName == "sp" ) {
                 if( commandDef != "" && commandDef != "sp" ) {
                     if( commandDef.indexOf(".") < 0 ) {
@@ -411,7 +456,14 @@ exports.convert = function(def,format) {
                 globalProps.initial_focus = true;
                 return "initial_focus";
             }
+            if( commandName == "frame" || commandName == "blueframe" ) {
+                parseFrame(commandName,commandDef,globalProps);
+                return "frame";
+            }
             var control = { type : commandName };
+            if( commandName == "image" ) {
+                control.name = commandDef;                
+            }
             commitSpaceBefore(control);
             if( !colDef ) {
                 colDef = control;
@@ -427,6 +479,7 @@ exports.convert = function(def,format) {
         };
         var finalizeColDef = function() {
             if( colDef.span ) {
+                var origDef  = colDef;
                 colDef = { type : "span" , items : colDef.span };
             }
             if( colProps ) {     
@@ -459,6 +512,11 @@ exports.convert = function(def,format) {
                 index = gitTill(def,index,'}');
                 ch = processCommand( def.substring(startIndex+1,index-1) );
                 if( ch == "region" ) {
+                    var saveFrame = null;                    
+                    if( globalProps.frame ) {
+                        saveFrame = globalProps.frame;
+                        globalProps.frame = null;
+                    }
                     var childRegion = convertXdialogRegion(def.substring(index),regionDepth+1);
                     index = index + childRegion.index;
                     if( !colDef ) {
@@ -470,7 +528,11 @@ exports.convert = function(def,format) {
                             colDef.span.push(firstSpan);
                         }
                         colDef.span.push( childRegion.tree );
-                    }                    
+                    }
+                    if( saveFrame ) {
+                        saveFrame.control.content  = colDef;
+                        colDef = saveFrame.control;
+                    }
                 } else if( ch == "endregion" && regionDepth > 0 ) {
                     break;
                 }
