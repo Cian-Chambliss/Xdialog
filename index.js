@@ -597,5 +597,5 @@ exports.convert = function(def,format) {
         var tree = { type : "table" , "items" : rowDef };
         return { tree : tree , index : index };
     };
-    return convertXdialogRegion(def).tree;
+    return convertXdialogRegion(def,0).tree;
 }
