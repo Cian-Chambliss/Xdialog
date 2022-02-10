@@ -681,7 +681,11 @@ exports.convert = function(def,format) {
                     var childRegion = convertXdialogRegion(def.substring(index),"endtab");
                     index = index + childRegion.index;
 
-                    childRegion.tree.variable = tabDef;
+                    var tabSettings = {};
+                    tabDef = processEventAndCondition(tabDef,tabSettings);
+                    childRegion.tree.variable = tabDef;                    
+                    applySettings(childRegion.tree,tabSettings);
+
                     if( !colDef ) {
                         colDef = childRegion.tree;
                     } else {
