@@ -59,8 +59,22 @@ exports.convert = function(def,format) {
             }
         };
         var processEventAndCondition = function(def,settings) {
+            var eventPos = def.indexOf("!");
             var condPos = def.indexOf("?");
             var condition = null;
+            if( eventPos > 0 ) {
+                if( condPos > 0 ) {
+                    if( condPos > eventPos ) {
+                        settings.event_name = def.substring(eventPos+1,condPos-eventPos-1);
+                        settings.condition = def.substring(condPos+1);
+                        def = def.substring(0,eventPos);
+                        condPos = -1;
+                    }
+                } else {
+                    settings.event_name = def.substring(eventPos+1);
+                    def = def.substring(0,eventPos);
+                }
+            }
             if( condPos > 0 ) {
                 settings.condition = def.substring(condPos+1);
                 def = def.substring(0,condPos);
@@ -107,7 +121,15 @@ exports.convert = function(def,format) {
             while( ('0' <= text[length] && text[length] <= '9') || text[length] == '.' )
                 ++length;
             return length;
-        }
+        };
+        var applySettings = function(control,settings) {
+            if( settings.condition ) {
+                control.condition =  settings.condition;
+            }
+            if( settings.event_name ) {
+                control.event_name =  settings.event_name;
+            }
+        };
         var processField = function(fieldDef) {
             var settings = {};
             fieldDef = processEventAndCondition(fieldDef,settings);
@@ -196,9 +218,7 @@ exports.convert = function(def,format) {
             if( choiceVar ) {
                 control.populateFrom = choiceVar;
             }
-            if( settings.condition ) {
-                control.condition =  settings.condition;
-            }
+            applySettings(control,settings);
             if( subOptions == "LogicalCheckbox" ) {
                 control.checkbox_logical = true;
             }
@@ -331,9 +351,7 @@ exports.convert = function(def,format) {
             var buttonControl = {  text : buttonText };
             var controlType = "button";
             var control = { type : controlType , text : buttonText };
-            if( settings.condition ) {
-                control.condition =  settings.condition;
-            }
+            applySettings(control,settings);
             if( settings.is_default ) {
                 control.is_default = true;
             }
@@ -379,9 +397,7 @@ exports.convert = function(def,format) {
             }
 
             var control = { type : controlType , variable : variableName };
-            if( settings.condition ) {
-                control.condition =  settings.condition;
-            }
+            applySettings(control,settings);
             commitSpaceBefore(control);
             if( controlType == "radio" ) {
                 radioDef = checkboxDef;
