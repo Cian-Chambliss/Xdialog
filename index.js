@@ -18,8 +18,12 @@ exports.convert = function(def,format) {
         var rowDef = [];
         var gitTill = function(text,index,chr) {
             while( index < text.length ) {
-                if( text[index] == chr ) {
-                    return index+1;
+                if( text[index] == '\\' ) {
+                    if( text[index+1] == chr || text[index+1] == '\\' ) {
+                        ++index;
+                    }
+                } else if( text[index] == chr ) {
+                    return index + 1;
                 }
                 ++index;
             }
@@ -504,9 +508,17 @@ exports.convert = function(def,format) {
         var processCommand = function(commandDef) {
             var commandName = commandDef.toLowerCase();
             var eqPos = commandDef.indexOf("=");
+            var formatSpec = null;
             if( eqPos > 0) {
                 commandName = commandDef.substring(0,eqPos);
                 commandDef = commandDef.substring(eqPos+1);
+                if( commandDef[0] =='%' ) {
+                    var endFormat = gitTill(commandDef,1,'%');
+                    if( endFormat > 0 ) {
+                        formatSpec =  commandDef.substring(1,endFormat-1);
+                        commandDef = commandDef.substring(endFormat);
+                    }
+                }
             }
             commandName = cleanupCommandName(commandName);
             if( commandName == "region" ) {
@@ -517,6 +529,7 @@ exports.convert = function(def,format) {
             }
             if( commandName == "tab" ) {
                 globalProps.tabDef = commandDef;
+                globalProps.tabFormat = formatSpec;
                 return "tab";
             }
             if( commandName == "endtab" ) {
@@ -663,7 +676,14 @@ exports.convert = function(def,format) {
             if( ch == '{') {    
                 processTextSnippet(index);
                 startIndex = index;
+                var commandFormat = def.indexOf("=%",index);
                 index = gitTill(def,index,'}');
+                if( commandFormat > 0 && commandFormat < index ) {
+                    var endFormat = gitTill(def,commandFormat+2,'%');
+                    if( endFormat > 0 ) {
+                        index = gitTill(def,endFormat,'}');
+                    }
+                }
                 ch = processCommand( def.substring(startIndex+1,index-1) );
                 if( ch == "region" ) {
                     var saveFrame = null;                    
