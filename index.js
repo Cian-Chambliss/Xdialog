@@ -422,7 +422,19 @@ exports.convert = function(def,format) {
                 }
                 colDef.span.push( control );
             }        
-        }
+        };
+        var collapseTable = function(tp) {
+            if( tp.type == "table" ) {
+                if( tp.items && tp.items.length == 1 ) {
+                    var row = tp.items[0];
+                    if( row.cells && row.cells.length == 1 ) {
+                        // TBD merge other settings
+                        return row.cells[0];
+                    }
+                }
+            }
+            return tp;
+        };
         var parseFrame = function(commandName,frameDef,props) {
             var size = numLength(frameDef);
             var frame = { width : 1 , height : 1 , control : { type : "frame" , content : null } };
@@ -482,6 +494,7 @@ exports.convert = function(def,format) {
                 tabName = processEventAndCondition(tabName,paneSettings);
                 var tabPane = { name : tabName , content : { type : "table" , "items" : rowDef }  };
                 applySettings(tabPane,paneSettings);
+                tabPane.content = collapseTable(tabPane.content);
                 tabPanes.push(tabPane);
             }
             rowDef = [];
@@ -778,6 +791,7 @@ exports.convert = function(def,format) {
                 rowDef.push(finalizeRowDef(colsDef));
             }
             var tree = { type : "table" , "items" : rowDef };
+            tree = collapseTable(tree);
             return { tree : tree , index : index };
         }
     };
