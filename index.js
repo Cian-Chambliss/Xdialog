@@ -1,15 +1,19 @@
 exports.convert = function(def,format) {
-    var convertXdialogRegion = function(def,regionDepth) {
+    var convertXdialogRegion = function(def,terminateWith) {
         var index = 0;
         var startIndex = 0;
         var colsDef = [];
         var colDef = null;
         var colProps = null;
         var rowProps = null;
+        var tabPanes = [];
+        var tabName  = null;
         var globalProps = { 
             wrap_text : 0 ,
             add_space : 0 ,
-            add_linefeed : 0
+            add_linefeed : 0,
+            tabDef : null,
+            paneDef : null
         };
         var rowDef = [];
         var gitTill = function(text,index,chr) {
@@ -464,6 +468,23 @@ exports.convert = function(def,format) {
 
             return commandName;
         }
+        var commitPane = function() {
+            processColumnChange(colDef);
+            if( colDef ) {
+                colsDef.push(finalizeColDef());
+                colDef = null;
+            }
+            if( colsDef.length > 0 ) {
+                rowDef.push(finalizeRowDef(colsDef));
+            }    
+            if( rowDef.length > 0 || tabPanes.length > 0 ) {
+                var tabPane = { name : tabName , content : { type : "table" , "items" : rowDef }  };
+                tabPanes.push(tabPane);
+            }
+            rowDef = [];
+            colsDef = [];
+            colDef = null;
+        };
         var processCommand = function(commandDef) {
             var commandName = commandDef.toLowerCase();
             var eqPos = commandDef.indexOf("=");
@@ -477,6 +498,17 @@ exports.convert = function(def,format) {
             }
             if( commandName == "endregion" ) {
                 return "endregion";
+            }
+            if( commandName == "tab" ) {
+                globalProps.tabDef = commandDef;
+                return "tab";
+            }
+            if( commandName == "endtab" ) {
+                return "endtab";
+            }
+            if( commandName == "pane" ) {
+                globalProps.paneDef = commandDef;
+                return "pane";
             }
             if( commandName == "line" ) {
                 if( commandDef != "" ) {
@@ -623,7 +655,7 @@ exports.convert = function(def,format) {
                         saveFrame = globalProps.frame;
                         globalProps.frame = null;
                     }
-                    var childRegion = convertXdialogRegion(def.substring(index),regionDepth+1);
+                    var childRegion = convertXdialogRegion(def.substring(index),"endregion");
                     index = index + childRegion.index;
                     if( !colDef ) {
                         colDef = childRegion.tree;
@@ -639,7 +671,39 @@ exports.convert = function(def,format) {
                         saveFrame.control.content  = colDef;
                         colDef = saveFrame.control;
                     }
-                } else if( ch == "endregion" && regionDepth > 0 ) {
+                } else if( ch == "tab" ) {
+                    var saveFrame = null;
+                    var tabDef = globalProps.tabDef;
+                    if( globalProps.frame ) {
+                        saveFrame = globalProps.frame;
+                        globalProps.frame = null;
+                    }
+                    var childRegion = convertXdialogRegion(def.substring(index),"endtab");
+                    index = index + childRegion.index;
+
+                    childRegion.tree.variable = tabDef;
+                    if( !colDef ) {
+                        colDef = childRegion.tree;
+                    } else {
+                        if( !colDef.span ) {
+                            var firstSpan = colDef;
+                            colDef = { span : []};
+                            colDef.span.push(firstSpan);
+                        }
+                        colDef.span.push( childRegion.tree );
+                    }
+                    if( saveFrame ) {
+                        saveFrame.control.content  = colDef;
+                        colDef = saveFrame.control;
+                    }
+                } else if( ch == "pane" && terminateWith == "endtab") { 
+                    if( tabName )  {
+                        commitPane();
+                    }
+                    tabName  = globalProps.paneDef;
+                } else if( ch == "endregion" && terminateWith == "endregion" ) {
+                    break;
+                } else if( ch == "endtab" && terminateWith == "endtab" ) {
                     break;
                 }
                 startIndex = index;
@@ -692,16 +756,23 @@ exports.convert = function(def,format) {
                 ++index;
             }
         }
-        processColumnChange(colDef);
-        if( colDef ) {
-            colsDef.push(finalizeColDef());
-            colDef = null;
+        if( terminateWith == "endtab" ) {
+            if( tabName )  {
+                commitPane();
+            }
+            return { tree : { type : "tab" , panes : tabPanes } , index : index };
+        } else {
+            processColumnChange(colDef);
+            if( colDef ) {
+                colsDef.push(finalizeColDef());
+                colDef = null;
+            }
+            if( colsDef.length > 0 ) {
+                rowDef.push(finalizeRowDef(colsDef));
+            }
+            var tree = { type : "table" , "items" : rowDef };
+            return { tree : tree , index : index };
         }
-        if( colsDef.length > 0 ) {
-            rowDef.push(finalizeRowDef(colsDef));
-        }
-        var tree = { type : "table" , "items" : rowDef };
-        return { tree : tree , index : index };
     };
-    return convertXdialogRegion(def,0).tree;
+    return convertXdialogRegion(def,null).tree;
 }
