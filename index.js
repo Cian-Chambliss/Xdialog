@@ -190,6 +190,7 @@ exports.convert = function(def,format) {
             if( formatSpec ) {
                 // TBD parse to flags
                 var formats = formatSpec.split(";");
+                var imageArg = null;
                 for( var i = 0 ; i < formats.length ; ++i ) {
                     var fs = formats[i].toLowerCase();
 
@@ -211,6 +212,39 @@ exports.convert = function(def,format) {
                             control.read_only = true;
                         } else if( fs == "^" ) {
                             control.all_caps = true;
+                        } else if( fs[0] == 'f' ) {
+                            control.smart = { type : "file" };
+                            if( fs.indexOf('.') > 0 ) {
+                                control.smart.file_types = formats[i].substring(1).split("|");
+                            }
+                        } else if( fs[0] == 's' ) {
+                            // Spinner...
+                            fs = fs.substring(1);
+                            var spinnerStart = numLength(fs);
+                            if( spinnerStart > 0 ) {
+                                var subText = fs.substring(0,spinnerStart);
+                                fs = fs.substring(spinnerStart);
+                                if( fs[0] == ',')
+                                    fs = fs.substring(1);
+                                spinnerStart = parseInt(subText, 10);
+                                var spinnerEnd = numLength(fs);
+                                if( spinnerEnd > 0 ) {
+                                    subText = fs.substring(0,spinnerEnd);
+                                    spinnerEnd = parseInt(subText, 10);
+                                    if( spinnerStart < spinnerEnd ) {
+                                        control.type = "spinner";
+                                        control.min = spinnerStart;
+                                        control.max = spinnerEnd;
+                                    }
+                                }
+                            }
+                        } else if( fs[0] == 'p' && fs[1] == '=' && fs.length > 2 ) {
+                            control.smart = { type : "popup" };
+                            if( fs.indexOf('.') > 0 ) {
+                                control.smart.popup_expression = formats[i].substring(2);
+                            }
+                        } else if( fs[0] == 'i' && fs[1] == '=' && fs.length > 2 ) {
+                            imageArg = formats[i].substring(2);
                         } else if( fs == "*" ) {
                             control.autoselect = true;
                         }
@@ -219,6 +253,9 @@ exports.convert = function(def,format) {
                             control.dragsource = true;
                         }
                     }
+                }
+                if( imageArg != null && control.smart ) {
+                    control.smart.button_image = imageArg;
                 }
             }
             if( !colDef ) {
