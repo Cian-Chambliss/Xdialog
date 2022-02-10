@@ -151,14 +151,26 @@ exports.convert = function(def,format) {
             if( fieldDef.indexOf("^") > 0 ) {
                 var listIndex = fieldDef.indexOf("^=");
                 var  overrideType = "dropdown";
+                var  subOptions = null;
                 if( listIndex < 1 ) {
                     listIndex = fieldDef.indexOf("^#");
-                    overrideType = "listbox";
+                    if( listIndex < 1 ) {
+                        listIndex = fieldDef.indexOf("^$");
+                        overrideType = "checkbox_listbox";
+                    } else {
+                        overrideType = "listbox";
+                    }
                 }
-
                 if( listIndex > 0 ) {
                     variableName = fieldDef.substring(0,listIndex);
                     fieldDef = fieldDef.substring(listIndex+2).trim();
+                    if( overrideType == "checkbox_listbox" ) {
+                        if( fieldDef[0] == '$' ) {
+                            fieldDef = fieldDef.substring(1);
+                        } else {
+                            subOptions = "LogicalCheckbox";
+                        }
+                    }
                     if( fieldDef[0] == '{') {
                         listitems = parseItemList(fieldDef);
                         controlType = overrideType;
@@ -187,6 +199,9 @@ exports.convert = function(def,format) {
             if( settings.condition ) {
                 control.condition =  settings.condition;
             }
+            if( subOptions == "LogicalCheckbox" ) {
+                control.checkbox_logical = true;
+            }
             if( formatSpec ) {
                 // TBD parse to flags
                 var formats = formatSpec.split(";");
@@ -212,6 +227,8 @@ exports.convert = function(def,format) {
                             control.read_only = true;
                         } else if( fs == "^" ) {
                             control.all_caps = true;
+                        } else if( fs[0] == 'd' ) {
+                            control.smart = { type : "field" };
                         } else if( fs[0] == 'f' ) {
                             control.smart = { type : "file" };
                             if( fs.indexOf('.') > 0 ) {
@@ -239,9 +256,26 @@ exports.convert = function(def,format) {
                                 }
                             }
                         } else if( fs[0] == 'p' && fs[1] == '=' && fs.length > 2 ) {
-                            control.smart = { type : "popup" };
-                            if( fs.indexOf('.') > 0 ) {
-                                control.smart.popup_expression = formats[i].substring(2);
+                            var popupExpression = formats[i].substring(2);
+                            var funcName = popupExpression.indexOf('(');
+                            if( funcName > 0 ) {
+                                funcName = popupExpression.substring(0,funcName).toLowerCase();
+                            } else {
+                                funcName = null;
+                            }
+                            if( funcName == "ui_get_path" ) {
+                                control.smart = { type : "get_path" };
+                            } else if( funcName == "popup.calendar" ) {
+                                control.smart = { type : "calendar" };
+                            } else if( funcName == "popup.calculator" ) {
+                                control.smart = { type : "calculator" };
+                            } else if( funcName == "popup.url" ) {
+                                control.smart = { type : "url" };
+                            } else if( funcName == "popup.email_a5" || funcName == "popup.email" ) {
+                                control.smart = { type : "email" };
+                            } else {
+                                control.smart = { type : "popup" };
+                                control.smart.popup_expression = popupExpression;
                             }
                         } else if( fs[0] == 'i' && fs[1] == '=' && fs.length > 2 ) {
                             imageArg = formats[i].substring(2);
