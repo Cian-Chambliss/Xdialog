@@ -478,7 +478,10 @@ exports.convert = function(def,format) {
                 rowDef.push(finalizeRowDef(colsDef));
             }    
             if( rowDef.length > 0 || tabPanes.length > 0 ) {
+                var paneSettings = {};
+                tabName = processEventAndCondition(tabName,paneSettings);
                 var tabPane = { name : tabName , content : { type : "table" , "items" : rowDef }  };
+                applySettings(tabPane,paneSettings);
                 tabPanes.push(tabPane);
             }
             rowDef = [];
