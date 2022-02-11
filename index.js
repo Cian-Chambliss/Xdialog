@@ -796,6 +796,9 @@ exports.convert = function(def,format) {
                 ++index;
             }
         }
+        if( startIndex < def.length  && terminateWith == null ) {
+            processTextSnippet(def.length);
+        }
         if( terminateWith == "endtab" ) {
             if( tabName )  {
                 commitPane();
