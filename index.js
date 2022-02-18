@@ -818,5 +818,54 @@ exports.convert = function(def,format) {
             return { tree : tree , index : index };
         }
     };
+    if( format == "propgrid") {
+        var mapNames = {
+            var : "variable"
+        };
+        var convertPropgrid = function(def) {
+            var lines = def.split("\n") , i;
+            var categories = [];
+            var category = null;
+            var item = null;
+            for( i = 0 ; i < lines.length ; ++i ) {
+                var line = lines[i].trim();
+                if( line.length > 1 ) {
+                    if( line[0] == '^' && line[1] == '^' ) {
+                        line = line.substring(2);
+                        category =  { name : line , items : [] };
+                        categories.push(category);
+                        item = null;
+                    } else if( category ) {
+                        if( line[0] == '+' && line[1] == '+' ) {
+                            line = line.substring(2).trim();
+                            item = { name : line };
+                            category.items.push(item);
+                        } else {
+                            var assignPos = line.indexOf('=');
+                            if( assignPos > 0 ) {
+                                var name = line.substring(0,assignPos).toLowerCase().trim();
+                                line = line.substring(assignPos+1).trim();
+                                if( mapNames[name] ) {
+                                    name = mapNames[name];
+                                }
+                                if( name == "data" ) {
+                                    if( line[0] == '@' ) {
+                                        line = { variable : line.substring(1) };
+                                    }
+                                }
+                                if( item ) {
+                                    item[name] = line;
+                                } else {
+                                    category[name] = line;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return categories;
+        }
+        return convertPropgrid(def);
+    }
     return convertXdialogRegion(def,null).tree;
 }
