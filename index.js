@@ -827,6 +827,8 @@ exports.convert = function(def,format) {
             var categories = [];
             var category = null;
             var item = null;
+            var itemDepth = [];
+            var pg = {  categories : categories };
             for( i = 0 ; i < lines.length ; ++i ) {
                 var line = lines[i].trim();
                 if( line.length > 1 ) {
@@ -835,11 +837,33 @@ exports.convert = function(def,format) {
                         category =  { name : line , items : [] };
                         categories.push(category);
                         item = null;
+                        itemDepth = [];
+                        lastParentDepth = -1;
                     } else if( category ) {
                         if( line[0] == '+' && line[1] == '+' ) {
                             line = line.substring(2).trim();
                             item = { name : line };
                             category.items.push(item);
+                            itemDepth = [item];
+                        } else if( line[0] == '<' && line[1] == '<' ) {
+                            var  depth = 0;
+                            while( line[2+depth] == '<' ) {
+                                ++depth;
+                            }
+                            line = line.substring(depth+2).trim();;
+                            while( depth >= itemDepth.length ) {
+                                --depth;
+                            }
+                            item = { name : line };
+                            if( depth >= 0 ) {
+                                if( !itemDepth[depth].items ) {
+                                    itemDepth[depth].items = [];
+                                }
+                                itemDepth[depth].items.push(item);
+                            } else {
+                                category.items.push(item);
+                                itemDepth = [item];
+                            }
                         } else {
                             var assignPos = line.indexOf('=');
                             if( assignPos > 0 ) {
@@ -860,10 +884,17 @@ exports.convert = function(def,format) {
                                 }
                             }
                         }
+                    } else {
+                        var assignPos = line.indexOf('=');
+                        if( assignPos > 0 ) {
+                            var name = line.substring(0,assignPos).toLowerCase().trim();
+                            line = line.substring(assignPos+1).trim();
+                            pg[name] = line;
+                       }
                     }
                 }
             }
-            return categories;
+            return pg;
         }
         return convertPropgrid(def);
     }
