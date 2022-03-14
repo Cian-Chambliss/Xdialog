@@ -93,6 +93,22 @@ exports.convert = function(def,format) {
             if( startIndex < endIndex ) {
                 var subText = def.substring(startIndex, endIndex);
                 subText = subText.trim();
+
+                if( subText.indexOf("\\") >= 0 ) {
+                    for( var i = 0 ; i < subText.length - 1 ; ++i ) {
+                        if( subText[i] == '\\' ) {
+                            if( subText[i+1] == '{' ) {
+                                if( i > 0 ) {
+                                    subText = subText.substring(0,i) + subText.substring(i+1);
+                                } else {
+                                    subText = subText.substring(i+1);
+                                }
+                                --i;
+                            }
+                        }
+                    }
+                }
+
                 if( subText.length > 0 ) {
                     var control = { type : "text", text : subText };
                     commitSpaceBefore(control);
@@ -673,7 +689,9 @@ exports.convert = function(def,format) {
         };
         while( index < def.length ) {
             var ch = def[index];
-            if( ch == '{') {    
+            if( ch == '\\' && (index+1) < def.length ) {                
+                index += 2;
+            } else if( ch == '{') {
                 processTextSnippet(index);
                 startIndex = index;
                 var commandFormat = def.indexOf("=%",index);
