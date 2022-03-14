@@ -97,7 +97,7 @@ exports.convert = function(def,format) {
                 if( subText.indexOf("\\") >= 0 ) {
                     for( var i = 0 ; i < subText.length - 1 ; ++i ) {
                         if( subText[i] == '\\' ) {
-                            if( subText[i+1] == '{' ) {
+                            if( subText[i+1] == '{' || subText[i+1] == '<' || subText[i+1] == '\\' || subText[i+1] == '(' || subText[i+1] == '|' || subText[i+1] == ';') {
                                 if( i > 0 ) {
                                     subText = subText.substring(0,i) + subText.substring(i+1);
                                 } else {
