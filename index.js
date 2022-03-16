@@ -482,6 +482,24 @@ exports.convert = function(def,format) {
             commitSpaceBefore(frame.control);
             props.frame = frame;
         };
+        var parseHyperlink = function(commandName,commandDef,globalProps) {
+            var settings = {};
+            commandDef = processEventAndCondition(commandDef,settings);
+            var controlType = "hyperlink";
+            var control = { type : controlType , text : commandDef };
+            applySettings(control,settings);
+            commitSpaceBefore(control);
+            if( !colDef ) {
+                colDef = control;
+            } else {
+                if( !colDef.span ) {
+                    var firstSpan = colDef;
+                    colDef = { span : []};
+                    colDef.span.push(firstSpan);
+                }
+                colDef.span.push( control );
+            }        
+        };
         var cleanupCommandName = function(commandName) {
             var endOf = commandName.length;
             while( endOf > 1 ) {
@@ -641,6 +659,10 @@ exports.convert = function(def,format) {
             }
             if( commandName == "frame" || commandName == "blueframe" ) {
                 parseFrame(commandName,commandDef,globalProps);
+                return "frame";
+            }
+            if( commandName == "hyperlink" ) {
+                parseHyperlink(commandName,commandDef,globalProps);
                 return "frame";
             }
             var control = { type : commandName };
